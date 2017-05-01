@@ -589,5 +589,12 @@ if [[ "$op" = "changeset" || "$op" = "empty-changeset" ]]; then
 			--change-set-name="$change_set_arn"
 	fi
 else
-	printf '%s\n' "$output" | jq .
+	if [[ $do_wait -eq 1 ]]; then
+		printf '.' >&2
+		sleep 5
+		wait_stack "${stack_name}"
+		exit $?
+	else
+		printf '%s\n' "$output" | jq .
+	fi
 fi
