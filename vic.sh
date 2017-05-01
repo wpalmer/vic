@@ -277,7 +277,7 @@ status(){
 	fi
 }
 
-wait(){
+wait_stack(){
 	local stack_name="$1"
 	local status=
 	local n=0
@@ -321,7 +321,7 @@ if [[ "$op" = "status" ]]; then
 fi
 
 if [[ "$op" = "wait" ]]; then
-	wait "${stack_name}"
+	wait_stack "${stack_name}"
 	exit $?
 fi
 
@@ -581,7 +581,7 @@ if [[ "$op" = "changeset" || "$op" = "empty-changeset" ]]; then
 		if [[ $do_wait -eq 1 ]]; then
 			printf '.' >&2
 			sleep 5
-			wait "${stack_name}"
+			wait_stack "${stack_name}"
 			exit $?
 		fi
 	else
