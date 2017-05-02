@@ -237,9 +237,14 @@ Proc.new do |
 			}
 		},
 		"packages" => {
-			"yum" => {
-				"jq" => []
-			},
+			"yum" => (
+				{"jq" => []}.merge(
+				if doPartition
+					{"parted" => []}
+				else
+					{ }
+				end
+			)),
 			"python" => {
 				"awscli" => []
 			}
