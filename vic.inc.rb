@@ -41,7 +41,7 @@ class TemplateDSL < JsonObjectDSL
 		{ :Name => [stack_name, name].join(':') }
 	end
 
-	def import_value(external_stack_name, name, environment: nil)
+	def import_stack_export(external_stack_name, name, environment: nil)
 		{
 			"Fn::ImportValue" => [
 				$cfg.stacks.var(external_stack_name.to_sym, environment: environment),
