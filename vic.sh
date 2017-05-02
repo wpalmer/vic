@@ -23,7 +23,7 @@ help(){
 	printf '\t--output=parameters    Rather than talking to CloudFormation, output the parameter json\n'
 	printf '\t--status               Output the current status of the stack\n'
 	printf '\t--wait                 Check stack status repeatedly, until it reaches a non-transitional state\n'
-	printf '\t--verbose              Output additional information when relevant\n'
+	printf '\t--verbose | -v         Output additional information when relevant\n'
 }
 
 if [[ -f "$base/.vic.env" ]]; then
@@ -121,7 +121,7 @@ while [[ $# -gt 0 ]]; do
 		--wait)
 			do_wait=1
 			;;
-		--verbose)
+		--verbose|-v)
 			do_verbose=1
 			;;
 		--environment=*)
