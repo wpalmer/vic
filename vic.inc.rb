@@ -50,6 +50,28 @@ class TemplateDSL < JsonObjectDSL
 		}
 	end
 
+	def import_stack_output(external_stack_name, name, environment: nil)
+		@stack_values = {} if @stack_values.nil?
+
+		stack_name = $cfg.stacks.var(external_stack_name.to_sym, environment: environment)
+		if @stack_values.has_key? stack_name
+			unless @stack_values[stack_name].has_key? name
+				raise "Unknown stack value #{stack_name}::#{name}"
+			end
+
+			return @stack_values[stack_name][name]
+		end
+
+		cfnclient = Aws::CloudFormation::Client.new()
+		stack = cfnclient.describe_stacks({stack_name: stack_name}).stacks[0]
+		@stack_values[stack_name] = {}
+		stack.outputs.each{|output|
+			@stack_values[stack_name][output.output_key] = output.output_value
+		}
+
+		return self.import_stack_output(external_stack_name, name, environment: environment)
+	end
+
 	def load_from_file(filename, *vargs, **hargs)
 		file = File.open(filename)
 
