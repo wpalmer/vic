@@ -305,7 +305,7 @@ wait_stack(){
 				return 0
 				;;
 			*)
-				printf 'Unknown status: %s\n' "$status"
+				printf 'Unknown status: %s\n' "$status" >&2
 				return 1
 				;;
 		esac
