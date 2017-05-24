@@ -388,7 +388,7 @@ case "$op" in
 		fi
 
 		cf_template="$(
-			jq <<<"$cf_template" \
+			jq -c <<<"$cf_template" \
 				--arg git_id "$(
 					if which git 2>/dev/null >&2; then
 						if git rev-parse HEAD 2>/dev/null >&2; then
