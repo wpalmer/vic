@@ -92,6 +92,106 @@ class TemplateDSL < JsonObjectDSL
 			contents = instance_exec(*vargs, **hargs, &contents)
 		end
 	end
+
+	def define_output(resource_name, resource_type, attribute, spec, export_default)
+		unless spec.is_a? Hash
+			spec = attribute.to_s if spec == true
+			spec = {:ShortName => spec}
+		end
+
+		name = nil
+		description = nil
+
+		name = spec[:Name].to_s if spec.has_key?(:Name)
+		description = spec[:Description].to_s if spec.has_key?(:Description)
+
+		if spec.has_key?(:ShortName)
+			compact_name = spec[:ShortName].to_s.split(/\s/).map(&:capitalize).join('').gsub(/[^_a-zA-Z0-9]/, '')
+			name = resource_name.to_s + compact_name unless spec.has_key?(:Name)
+		end
+
+		if description.nil?
+			resource_description = resource_name.to_s
+
+			if resource_name.to_s.end_with? resource_type.split('::').last
+				resource_description = (
+					resource_name[0..-((resource_type.split('::').last.length)+1)] +
+					" " +
+					resource_type.split('::').last.
+						gsub(/(.)([A-Z][^A-Z])/,'\1 \2').
+						gsub(/([^A-Z])([A-Z])/,'\1 \2').
+						squeeze(' ').
+						gsub(/([A-Z]) ([A-Z])/, '\1\2')
+				)
+			end
+
+			short_description = attribute.to_s
+			if spec.has_key?(:ShortDescription)
+				short_description = spec[:ShortDescription].to_s
+			elsif spec.has_key?(:ShortName)
+				short_description = spec[:ShortName].to_s
+			end
+
+			description = "The #{short_description} of the #{resource_description}"
+		end
+
+		name = attribute.to_s if name.nil?
+		export = if export_default then export_value(name) else nil end
+		if spec.has_key?(:Export)
+			if !!spec[:Export] == spec[:Export]
+				export = nil if !spec[:Export]
+			else
+				export = spec[:Export].to_s
+			end
+		end
+
+		if attribute == :Ref
+			value = ref(resource_name.to_s)
+		else
+			value = get_att(resource_name.to_s, attribute.to_s)
+		end
+
+		output name, (
+			{}.merge(
+				{:Value => value}
+			).merge(
+				(if description.nil? then {} else {:Description => description} end)
+			).merge(
+				(if export.nil? then {} else {:Export => export} end)
+			)
+		)
+	end
+
+	alias resource_orig resource
+	def resource(name, options)
+		if options.has_key?(:Output)
+			type = if options.has_key?(:Type) then options[:Type] else nil end
+
+			export_default = false
+			attributes = options[:Output]
+			if options[:Output].is_a? Hash
+				if options[:Output].has_key? :Export then export_default = options[:Output][:Export] end
+				if options[:Output].has_key? :Attributes then attributes = options[:Output][:Attributes] end
+			end
+
+			if attributes.is_a? Array
+				attributes.each do |attribute|
+					define_output(name, type, attribute, if attribute == :Ref then "Id" else attribute.to_s end, export_default)
+				end
+			elsif attributes.is_a? Hash
+				attributes.each do |attribute, spec|
+					next if attribute == :Export and attributes == options[:Output]
+					define_output(name, type, attribute, spec, export_default)
+				end
+			elsif !!attributes == attributes
+				define_output(name, type, :Ref, "Id", export_default)
+			else
+				define_output(name, type, :Ref, attributes, export_default)
+			end
+		end
+
+		resource_orig(name, options.tap{|o| o.delete(:Output) })
+	end
 end
 
 # Define "S3Frame", which quacks like a diw/config "Frame", so that we can read

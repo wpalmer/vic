@@ -28,6 +28,8 @@ Key features exposed via `vic.sh`:
  - Define/Utilize stack "partials" to accomplish common goals (eg: automatically
    attaching EFS/EBS volumes)
 
+ - Declare resource-related outputs as part of the resource declaration
+
  - Define "environments" by creating a file `_<environment name>.rb`, which will
    automatically load configuration overrides based on the `--environment=`
    argument.
