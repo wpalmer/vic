@@ -93,6 +93,19 @@ class TemplateDSL < JsonObjectDSL
 		end
 	end
 
+	def _ucword(word)
+		return word.upcase if word.length < 2
+		word[0].upcase + word[1..-1]
+	end
+
+	def _snakeify(camel, glue = '_')
+		camel.
+			gsub(/(.)([A-Z][^A-Z])/,'\1' + glue + '\2').
+			gsub(/([^A-Z])([A-Z])/,'\1' + glue + '\2').
+			squeeze(glue).
+			gsub(/([A-Z])#{glue}([A-Z])/, '\1\2')
+	end
+
 	def define_output(resource_name, resource_type, attribute, spec, export_default)
 		unless spec.is_a? Hash
 			spec = attribute.to_s if spec == true
@@ -106,7 +119,7 @@ class TemplateDSL < JsonObjectDSL
 		description = spec[:Description].to_s if spec.has_key?(:Description)
 
 		if spec.has_key?(:ShortName)
-			compact_name = spec[:ShortName].to_s.split(/\s/).map(&:capitalize).join('').gsub(/[^_a-zA-Z0-9]/, '')
+			compact_name = _snakeify(spec[:ShortName].to_s).split(/_/).map{|s|_ucword(s)}.join('').gsub(/[^_a-zA-Z0-9]/, '')
 			name = resource_name.to_s + compact_name unless spec.has_key?(:Name)
 		end
 
@@ -117,11 +130,7 @@ class TemplateDSL < JsonObjectDSL
 				resource_description = (
 					resource_name[0..-((resource_type.split('::').last.length)+1)] +
 					" " +
-					resource_type.split('::').last.
-						gsub(/(.)([A-Z][^A-Z])/,'\1 \2').
-						gsub(/([^A-Z])([A-Z])/,'\1 \2').
-						squeeze(' ').
-						gsub(/([A-Z]) ([A-Z])/, '\1\2')
+					_snakeify(resource_type.split('::').last, ' ')
 				)
 			end
 
