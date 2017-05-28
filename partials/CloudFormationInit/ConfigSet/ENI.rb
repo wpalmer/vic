@@ -1,7 +1,8 @@
 Proc.new do |
 	elasticNetworkInterfaceIds: [], # array of Elastic Network Interface ids
 	doDockerRestart: false, # whether or not to restart the docker service
-	doECSRestart: false # whether or not to restart the ECS service
+	doECSRestart: false, # whether or not to restart the ECS service
+	doReplace: true # whether or not to ifdown eth0 after attachment
 |
 	{
 		"commands" => {
@@ -126,8 +127,11 @@ Proc.new do |
 						routes="$routes $device_routes"
 					done
 
-					ifdown eth0 || true
-
+					#{
+						if doReplace
+							"if [[ $did_attach -gt 0 ]]; then ifdown eth0 || true; fi"
+						end
+					}
 					#{
 						if doDockerRestart
 							"if [[ $mounts -gt 0 ]]; then service docker restart; fi"
