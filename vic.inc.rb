@@ -176,7 +176,15 @@ class TemplateDSL < JsonObjectDSL
 
 			if attributes.is_a? Array
 				attributes.each do |attribute|
-					define_output(name, type, attribute, if attribute == :Ref then "Id" else attribute.to_s end, export_default)
+					if attribute.is_a? Hash and attribute.has_key?(:Attribute)
+						spec = attribute
+						attribute = spec[:Attribute]
+						spec.delete(:Attribute)
+						define_output(name, type, attribute, spec, export_default)
+					else
+						spec = if attribute == :Ref then "Id" else attribute.to_s end
+						define_output(name, type, attribute, spec, export_default)
+					end
 				end
 			elsif attributes.is_a? Hash
 				attributes.each do |attribute, spec|
