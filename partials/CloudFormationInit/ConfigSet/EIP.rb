@@ -47,6 +47,21 @@ Proc.new do |
 					export AWS_DEFAULT_REGION
 					EIP_IDS=( {{ join(" ", *locals[:addr]) }} )
 
+					response_json="$(
+						"$AWS_CMD" ec2 describe-instances --instance-id="$EC2_INSTANCE_ID"
+					)"
+					eni_id="$(
+						jq -r '
+							.Reservations[].Instances[].NetworkInterfaces |
+							first |
+							.NetworkInterfaceId
+						' <<<"$response_json"
+					)"
+					if [[ -z "$eni_id" ]]; then
+						printf 'Failed to determine ENI id for attachment' >&2
+						exit 1
+					fi
+
 					for eip in "${EIP_IDS[@]}"; do
 						response_json="$(
 							"$AWS_CMD" ec2 describe-addresses --allocation-ids $eip
@@ -59,7 +74,7 @@ Proc.new do |
 
 						if [[ -z "$eip_association" ]]; then
 							"$AWS_CMD" ec2 associate-address \\
-								--instance-id "$EC2_INSTANCE_ID" \\
+								--network-interface-id "$eni_id" \\
 								--allocation-id "$eip"
 						fi
 					done
