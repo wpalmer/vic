@@ -3,10 +3,11 @@ Proc.new do |
 	type: "AWS::AutoScaling::LaunchConfiguration",
 	metadata: {},
 	properties: {},
+	dependson: nil,
 	extraUserData: nil,
 	signalResourceName: nil
 |
-	resource resourceName,
+	resource resourceName, {
 		:Type => type,
 		:Metadata => metadata.merge({
 			"AWS::CloudFormation::Authentication" =>
@@ -114,4 +115,9 @@ Proc.new do |
 			END_SH
 			))
 		}.merge(properties)
+	}.merge(
+		if !dependson.nil?
+			{ :DependsOn => dependson }
+		else {} end
+	)
 end
