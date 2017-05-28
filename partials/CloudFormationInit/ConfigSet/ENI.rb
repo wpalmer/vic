@@ -11,11 +11,22 @@ Proc.new do |
 					#!/bin/bash -xe
 					AWS_CMD="$(PATH=/usr/local/bin:/usr/bin:/bin which aws)"
 					EC2_INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+					EC2_AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
 					AWS_DEFAULT_REGION={{ref('AWS::Region')}}
 					export AWS_DEFAULT_REGION
 					ENI_IDS=( {{join(" ", *locals[:eni_ids])}} )
-
+					AZ_ENI_IDS=( )
 					for eni in "${ENI_IDS[@]}"; do
+						eni_az="${eni%%:*}"
+						if [[ "$eni_az" = "$eni" ]]; then eni_az=; fi
+						if [[ -n "$eni_az" ]]; then eni="${eni#*:}"; fi
+						if [[ -n "$eni_az" ]] && [[ "$eni_az" != "$EC2_AVAILABILITY_ZONE" ]]; then
+							continue
+						fi
+						AZ_ENI_IDS=( "${AZ_ENI_IDS[@]}" "$eni" )
+					done
+
+					for eni in "${AZ_ENI_IDS[@]}"; do
 						response_json="$(
 							"$AWS_CMD" ec2 describe-network-interfaces \\
 								--network-interface-id $eni
@@ -44,13 +55,24 @@ Proc.new do |
 					#!/bin/bash -xe
 					AWS_CMD="$(PATH=/usr/local/bin:/usr/bin:/bin which aws)"
 					EC2_INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+					EC2_AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
 					AWS_DEFAULT_REGION={{ref('AWS::Region')}}
 					export AWS_DEFAULT_REGION
 					ENI_IDS=( {{join(" ", *locals[:eni_ids])}} )
+					AZ_ENI_IDS=( )
+					for eni in "${ENI_IDS[@]}"; do
+						eni_az="${eni%%:*}"
+						if [[ "$eni_az" = "$eni" ]]; then eni_az=; fi
+						if [[ -n "$eni_az" ]]; then eni="${eni#*:}"; fi
+						if [[ -n "$eni_az" ]] && [[ "$eni_az" != "$EC2_AVAILABILITY_ZONE" ]]; then
+							continue
+						fi
+						AZ_ENI_IDS=( "${AZ_ENI_IDS[@]}" "$eni" )
+					done
 
 					i=0
 					did_attach=0
-					for eni in "${ENI_IDS[@]}"; do
+					for eni in "${AZ_ENI_IDS[@]}"; do
 						i=$(( $i + 1 ))
 						response_json="$(
 							"$AWS_CMD" ec2 describe-network-interfaces \\
@@ -80,7 +102,7 @@ Proc.new do |
 						fi
 					done
 
-					for eni in "${ENI_IDS[@]}"; do
+					for eni in "${AZ_ENI_IDS[@]}"; do
 						eni_status=
 						while true; do
 							response_json="$(
@@ -112,7 +134,7 @@ Proc.new do |
 
 					i=0
 					routes=
-					for eni in "${ENI_IDS[@]}"; do
+					for eni in "${AZ_ENI_IDS[@]}"; do
 						i=$(( $i + 1 ))
 						device=eth$i
 						device_routes=
