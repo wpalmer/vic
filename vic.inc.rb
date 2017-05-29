@@ -202,7 +202,7 @@ class TemplateDSL < JsonObjectDSL
 						define_output(name, type, attribute, spec, export_default)
 					end
 				elsif attributes.is_a? Symbol
-					spec = if attribute == :Ref then "Id" else attribute.to_s end
+					spec = if attributes == :Ref then "Id" else attributes.to_s end
 					define_output(name, type, attributes, spec, export_default)
 				elsif !!attributes == attributes
 					define_output(name, type, :Ref, "Id", export_default)
