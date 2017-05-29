@@ -173,41 +173,46 @@ class TemplateDSL < JsonObjectDSL
 
 	alias resource_orig resource
 	def resource(name, options)
-		if options.has_key?(:Output)
-			type = if options.has_key?(:Type) then options[:Type] else nil end
+		[:Output, :Export].each do |option|
+			if options.has_key?(option)
+				type = if options.has_key?(:Type) then options[:Type] else nil end
 
-			export_default = false
-			attributes = options[:Output]
-			if options[:Output].is_a? Hash
-				if options[:Output].has_key? :Export then export_default = options[:Output][:Export] end
-				if options[:Output].has_key? :Attributes then attributes = options[:Output][:Attributes] end
-			end
+				export_default = (option == :Export)
+				attributes = options[option]
+				if attributes.is_a? Hash
+					if attributes.has_key? :Export then export_default = attributes[:Export] end
+					if attributes.has_key? :Attributes then attributes = attributes[:Attributes] end
+				end
 
-			if attributes.is_a? Array
-				attributes.each do |attribute|
-					if attribute.is_a? Hash and attribute.has_key?(:Attribute)
-						spec = attribute
-						attribute = spec[:Attribute]
-						spec.delete(:Attribute)
-						define_output(name, type, attribute, spec, export_default)
-					else
-						spec = if attribute == :Ref then "Id" else attribute.to_s end
+				if attributes.is_a? Array
+					attributes.each do |attribute|
+						if attribute.is_a? Hash and attribute.has_key?(:Attribute)
+							spec = attribute
+							attribute = spec[:Attribute]
+							spec.delete(:Attribute)
+							define_output(name, type, attribute, spec, export_default)
+						else
+							spec = if attribute == :Ref then "Id" else attribute.to_s end
+							define_output(name, type, attribute, spec, export_default)
+						end
+					end
+				elsif attributes.is_a? Hash
+					attributes.each do |attribute, spec|
+						next if attribute == :Export and attributes == options[option]
 						define_output(name, type, attribute, spec, export_default)
 					end
+				elsif attributes.is_a? Symbol
+					spec = if attribute == :Ref then "Id" else attribute.to_s end
+					define_output(name, type, attributes, spec, export_default)
+				elsif !!attributes == attributes
+					define_output(name, type, :Ref, "Id", export_default)
+				else
+					define_output(name, type, :Ref, attributes, export_default)
 				end
-			elsif attributes.is_a? Hash
-				attributes.each do |attribute, spec|
-					next if attribute == :Export and attributes == options[:Output]
-					define_output(name, type, attribute, spec, export_default)
-				end
-			elsif !!attributes == attributes
-				define_output(name, type, :Ref, "Id", export_default)
-			else
-				define_output(name, type, :Ref, attributes, export_default)
 			end
 		end
 
-		resource_orig(name, options.tap{|o| o.delete(:Output) })
+		resource_orig(name, options.tap{|o| [:Output,:Export].each{|k| o.delete(k)} })
 	end
 end
 
