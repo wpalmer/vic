@@ -268,6 +268,7 @@ class S3Frame
 	end
 
 	def has_var?(name)
+		return false if @configprefix.length > 0
 		return !@var_cache[name].nil? if @var_cache.has_key?(name)
 
 		begin
