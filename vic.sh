@@ -194,7 +194,10 @@ if [[ "$op" = "graph" ]]; then
 		canonical="${template%.rb}"
 		if
 			[[ "${canonical%-registry}" = "${canonical}" ]] && \
-			[[ "${canonical#-dns}" = "${canonical}" ]]
+			(
+				[[ "${canonical%-dns}" = "${canonical}" ]] ||
+				[[ "${canonical%-private-dns}" != "${canonical}" ]]
+			)
 		then
 			canonical="${environment}-${canonical}"
 		fi
@@ -242,6 +245,9 @@ fi
 
 if [[ $did_stack -eq 0 ]]; then
 	case "$stack" in
+		*-private-dns)
+			stack_name="${environment}-${stack}"
+			;;
 		*-registry|*-dns)
 			if [[ "$environment" != "live" ]]; then
 				printf "implicitly-global stack '%s' requires --environment=live\n" \

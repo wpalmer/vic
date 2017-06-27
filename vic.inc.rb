@@ -373,7 +373,11 @@ $cfg = ::DIW::Config::Config.new do
 
 				case name
 				when /-(?:dns|registry)$/
-					name
+					if name =~ /-private-dns$/
+						[environment, name].join('-')
+					else
+						name
+					end
 				else
 					[environment, name].join('-')
 				end
