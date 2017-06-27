@@ -23,6 +23,7 @@ help(){
 	printf '\t--output=template      Rather than talking to CloudFormation, output the template json\n'
 	printf '\t--output=parameters    Rather than talking to CloudFormation, output the parameter json\n'
 	printf '\t--status               Output the current status of the stack\n'
+	printf '\t--wtf                  Output the event log of the most-recent failed-looking stack\n'
 	printf '\t--wait                 Check stack status repeatedly, until it reaches a non-transitional state\n'
 	printf '\t--verbose | -v         Output additional information when relevant\n'
 }
@@ -86,6 +87,7 @@ done
 
 did_template=0
 did_stack=0
+did_environment=0
 do_wait=0
 do_verbose=0
 op=
@@ -125,11 +127,15 @@ while [[ $# -gt 0 ]]; do
 		--wait)
 			do_wait=1
 			;;
+		--wtf)
+			op=wtf
+			;;
 		--verbose|-v)
 			do_verbose=1
 			;;
 		--environment=*)
 			environment="${arg#*=}"
+			did_environment=1
 			;;
 		--help)
 			help
@@ -278,6 +284,83 @@ if [[ $did_stack -eq 0 ]] && [[ -n "$stack" ]]; then
 	esac
 else
 	stack_name="$stack"
+fi
+
+if [[ "$op" = "wtf" ]]; then
+	if [[ -z "$stack_name" ]]; then
+		if [[ $did_environment -eq 1 ]]; then
+			filter_environment="$environment"
+		else
+			filter_environment=
+		fi
+
+		stack_name="$(
+			aws cloudformation list-stacks \
+				--stack-status-filter '[
+					"CREATE_FAILED",
+					"ROLLBACK_IN_PROGRESS",
+					"ROLLBACK_FAILED",
+					"ROLLBACK_COMPLETE",
+					"UPDATE_ROLLBACK_IN_PROGRESS",
+					"UPDATE_ROLLBACK_FAILED",
+					"UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS",
+					"UPDATE_ROLLBACK_COMPLETE"
+				]' |
+			jq -r --arg environment "$filter_environment" '
+				[
+					.StackSummaries[] |
+					select(
+						($environment == "") or
+						(.StackName | startswith( $environment + "-" )) or
+						(
+							($environment == "live") and
+							(.StackName | endswith("-dns")) and
+							((.StackName | endswith("-private-dns"))|not)
+						)
+					)
+				] |
+				sort_by( .LastUpdatedTime ) | last |
+				.StackName // ""
+			'
+		)"
+
+		if [[ -z "$stack_name" ]]; then
+			printf 'No failed stacks detected\n' >&2
+			exit 1
+		fi
+	fi
+
+	echo "STACK: $stack_name"
+	aws cloudformation describe-stack-events \
+		--stack-name="$stack_name" |
+	jq -r '[
+		.StackEvents[] |
+		select(
+			.ResourceStatusReason and
+			(
+				[
+					[
+						"CREATE_FAILED",
+						"ROLLBACK_IN_PROGRESS",
+						"ROLLBACK_FAILED",
+						"ROLLBACK_COMPLETE",
+						"UPDATE_ROLLBACK_IN_PROGRESS",
+						"UPDATE_ROLLBACK_FAILED",
+						"UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS",
+						"UPDATE_ROLLBACK_COMPLETE"
+					][] == .ResourceStatus
+				] | any
+			)
+		)
+	] |
+	reverse[] |
+	[
+		.Timestamp,
+		.ResourceType,
+		.ResourceStatus + ":",
+		.ResourceStatusReason
+	] | join(" ")'
+	exit 0
 fi
 
 if [[ $did_template -ne 1 ]]; then
