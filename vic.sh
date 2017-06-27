@@ -619,6 +619,10 @@ if [[ "$op" = "changeset" || "$op" = "empty-changeset" ]]; then
 
 	if [[ "$status" != "CREATE_COMPLETE" ]]; then
 		printf '%s\n' "$status" >&2
+		if [[ $do_verbose -gt 0 ]]; then
+			printf '%s\n' "$change_set_description" >&2
+		fi
+
 		aws cloudformation delete-change-set \
 			--change-set-name="$change_set_arn"
 		exit 1
