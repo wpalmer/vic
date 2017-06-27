@@ -22,6 +22,25 @@ Proc.new do |
 				END_SH
 				)
 			},
+			"10_configure_log_drivers" => {
+				"test" => interpolate(<<-END_SH.gsub(/^\s+/, "")
+					#!/bin/bash -xe
+					cfg='ECS_AVAILABLE_LOGGING_DRIVERS=["json-file","awslogs","gelf"]'
+					if [[ -e /etc/ecs/ecs.config ]] && grep -q -F "$cfg" /etc/ecs/ecs.config; then
+						false
+					else
+						true
+					fi
+				END_SH
+				),
+				"command" => interpolate(<<-END_SH.gsub(/^\s+/, "")
+					#!/bin/bash -xe
+					cfg='ECS_AVAILABLE_LOGGING_DRIVERS=["json-file","awslogs","gelf"]'
+					mkdir -p /etc/ecs
+					echo "$cfg" >> /etc/ecs/ecs.config
+				END_SH
+				)
+			},
 			"50_add_instance_to_cluster" => {
 				"test" => interpolate(<<-END_SH.gsub(/^\s+/, ""), {cn: clusterName}
 					#!/bin/bash -xe,
