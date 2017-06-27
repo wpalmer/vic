@@ -232,6 +232,14 @@ class S3Frame
 		@s3client = Aws::S3::Client.new()
 	end
 
+	def maybe_prefix?(section_path)
+		if section_path.length > @configprefix.length
+			section_path[0..@configprefix.length-1] == @configprefix
+		else
+			@configprefix[0..section_path.length-1] == section_path
+		end
+	end
+
 	def strip_prefix(section_path)
 		return section_path if @configprefix.length == 0
 		return nil if section_path.length < @configprefix.length
@@ -243,7 +251,15 @@ class S3Frame
 		return !!@section_cache[path.join "."] if @section_cache.has_key?(path.join ".")
 
 		key = strip_prefix(path)
-		return false if key.nil?
+		if key.nil?
+			if maybe_prefix?(path)
+				@section_cache[path.join "."] = { }
+				return true
+			end
+
+			return false
+		end
+
 		if key.length == 0 then
 			@section_cache[path.join "."] = { }
 			return true
@@ -304,6 +320,8 @@ class S3Frame
 		return !@section_cache[section_path.join "."][name].nil? if @section_cache[section_path.join "."].has_key?(name)
 
 		key = strip_prefix(section_path)
+		return false if key.nil?
+
 		begin
 			s3client.head_object(
 				bucket: @bucket,
@@ -325,6 +343,8 @@ class S3Frame
 		end
 
 		key = strip_prefix(section_path)
+		return nil if key.nil?
+
 		result = s3client.get_object(
 			bucket: @bucket,
 			key: @s3prefix + (key + [ name.to_s ]).join("/")
