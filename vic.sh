@@ -259,7 +259,7 @@ if [[ "$op" = "graph" ]]; then
 	exit
 fi
 
-if [[ $did_stack -eq 0 ]]; then
+if [[ $did_stack -eq 0 ]] && [[ -n "$stack" ]]; then
 	case "$stack" in
 		*-private-dns)
 			stack_name="${environment}-${stack}"
