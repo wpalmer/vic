@@ -19,6 +19,7 @@ help(){
 	printf '\t--update               Update an existing stack\n'
 	printf '\t--update-empty         Update metadata of an existing stack, but not the resources\n'
 	printf '\t--update-immediate     Update an existing stack, without asking for confirmation\n'
+	printf '\t--update-empty-all     Try to update the metadata of all existing stacks\n'
 	printf '\t--output=template      Rather than talking to CloudFormation, output the template json\n'
 	printf '\t--output=parameters    Rather than talking to CloudFormation, output the parameter json\n'
 	printf '\t--status               Output the current status of the stack\n'
@@ -106,6 +107,9 @@ while [[ $# -gt 0 ]]; do
 		--update-empty)
 			op=empty-changeset
 			;;
+		--update-empty-all)
+			op=update-empty-all
+			;;
 		--update)
 			op=changeset
 			;;
@@ -156,6 +160,18 @@ if [[ -z "$op" ]]; then
 		usage >&2
 		exit 1
 	fi
+fi
+
+if [[ "$op" = "update-empty-all" ]]; then
+	for stack in "$base"/*.rb; do
+		stack="${stack##*/}"
+		[[ "${stack#_}" = "${stack}" ]] || continue
+		[[ "${stack%inc.rb}" = "${stack}" ]] || continue
+
+		echo "${stack}"
+		"$base/vic.sh" --update-empty --environment="${environment}" "${stack}" || true
+	done
+	exit
 fi
 
 if [[ "$op" = "graph" ]]; then
