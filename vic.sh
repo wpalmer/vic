@@ -575,7 +575,7 @@ case "$op" in
 			"${extra_tags[@]}"
 			--stack-name="${stack_name}"
 			--parameters="$cf_parameters"
-			--capabilities=CAPABILITY_IAM
+			--capabilities='["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]'
 		)
 		;;
 	validate)
