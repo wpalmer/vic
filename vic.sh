@@ -481,8 +481,25 @@ if [[ "$output" = "diff" ]]; then
 		exit 1
 	fi
 
+	jqtweak='
+		.TemplateBody |
+			del(.Outputs.MetaCfnParametersSha256) |
+			del(.Outputs.MetaCfnTemplateSha256) |
+			del(.Outputs.MetaGitId) |
+			del(.Outputs.MetaVicEnvironment) |
+			del(.Outputs.MetaVicSourceFile)
+	'
+	if \
+		diff -q \
+			--label="cloudformation/$stack_name" <(jq --sort-keys "$jqtweak" <<<"$cf_old_template") \
+			--label="local/$stack_name" <(jq --sort-keys . <<<"$cf_template") >/dev/null 2>&1
+	then
+		echo "no differences" >&2
+		exit 0
+	fi
+
 	diff -u \
-		--label="cloudformation/$stack_name" <(jq --sort-keys .TemplateBody <<<"$cf_old_template") \
+		--label="cloudformation/$stack_name" <(jq --sort-keys "$jqtweak" <<<"$cf_old_template") \
 		--label="local/$stack_name" <(jq --sort-keys . <<<"$cf_template") |
 	less -F
 	exit 0
