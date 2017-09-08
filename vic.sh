@@ -20,6 +20,7 @@ help(){
 	printf '\t--update-empty         Update metadata of an existing stack, but not the resources\n'
 	printf '\t--update-immediate     Update an existing stack, without asking for confirmation\n'
 	printf '\t--update-empty-all     Try to update the metadata of all existing stacks\n'
+	printf '\t--output=diff          Rather than manipulating CloudFormation, output a diff of the template json\n'
 	printf '\t--output=template      Rather than talking to CloudFormation, output the template json\n'
 	printf '\t--output=parameters    Rather than talking to CloudFormation, output the parameter json\n'
 	printf '\t--status               Output the current status of the stack\n'
@@ -471,6 +472,19 @@ parameters(){
 cf_template="$( expand "./${template}" )"
 if [[ "$output" = "template" ]]; then
 	printf '%s\n' "$cf_template"
+	exit 0
+fi
+
+if [[ "$output" = "diff" ]]; then
+	cf_old_template="$(aws cloudformation get-template --stack="$stack_name")"
+	if [[ -z "$cf_old_template" ]]; then
+		exit 1
+	fi
+
+	diff -u \
+		--label="cloudformation/$stack_name" <(jq --sort-keys .TemplateBody <<<"$cf_old_template") \
+		--label="local/$stack_name" <(jq --sort-keys . <<<"$cf_template") |
+	less -F
 	exit 0
 fi
 
