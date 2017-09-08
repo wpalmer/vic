@@ -501,7 +501,7 @@ if [[ "$output" = "diff" ]]; then
 	diff -u \
 		--label="cloudformation/$stack_name" <(jq --sort-keys "$jqtweak" <<<"$cf_old_template") \
 		--label="local/$stack_name" <(jq --sort-keys . <<<"$cf_template") |
-	less -F
+	(if [[ -t 0 ]]; then less -F; else cat;  fi)
 	exit 0
 fi
 
