@@ -10,16 +10,18 @@ class TemplateDSL < JsonObjectDSL
 	def exec!()
 		if ARGV[0] == "parameters"
 			STDOUT.puts(JSON.generate((@dict[:Parameters] || []).map {|k,definition|
-				{
-					ParameterKey: k,
-					ParameterValue: (
-						if $cfg.has_var?(k)
-							$cfg.var(k)
-						else
-							self.parameters[k]
-						end
-					)
-				}
+				if $cfg.has_var?(k) || !self.parameters[k].empty?
+					{
+						ParameterKey: k,
+						ParameterValue: (
+							if $cfg.has_var?(k)
+								$cfg.var(k)
+							else
+								self.parameters[k]
+							end
+						)
+					}
+				end
 			}.to_a.compact))
 		else
 			cfn(self)
