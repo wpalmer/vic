@@ -487,7 +487,8 @@ if [[ "$output" = "diff" ]]; then
 			del(.Outputs.MetaCfnTemplateSha256) |
 			del(.Outputs.MetaGitId) |
 			del(.Outputs.MetaVicEnvironment) |
-			del(.Outputs.MetaVicSourceFile)
+			del(.Outputs.MetaVicSourceFile) |
+			if .Outputs == {} then del(.Outputs) else . end
 	'
 	if \
 		diff -q \
