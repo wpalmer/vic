@@ -65,7 +65,7 @@ Proc.new do |
 					}
 				}.merge(
 					if metadata.has_key? "AWS::CloudFormation::Init"
-						metadata["AWS::CloudFormation::Init"]
+						Hash[metadata["AWS::CloudFormation::Init"].map{|k,v|[k.to_s, v]}]
 					else
 						{}
 					end
@@ -76,10 +76,15 @@ Proc.new do |
 							"cfnInit" => ["cfn", {"ConfigSet" => "default"}],
 							"cfnUpdate" => ["cfn", {"ConfigSet" => "default"}]
 						}.merge(
-							if metadata.has_key?("AWS::CloudFormation::Init") &&
-								metadata["AWS::CloudFormation::Init"].has_key?("configSets")
-
-								metadata["AWS::CloudFormation::Init"]["configSets"]
+							if metadata.has_key?("AWS::CloudFormation::Init")
+								initdata = Hash[
+									metadata["AWS::CloudFormation::Init"].map{|k,v|[k.to_s, v]}
+								]
+								if initdata.has_key?("configSets")
+									Hash[ initdata["configSets"].map{|k,v|[k.to_s, v]} ]
+								else
+									{}
+								end
 							else
 								{}
 							end
