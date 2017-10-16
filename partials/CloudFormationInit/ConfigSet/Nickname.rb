@@ -25,7 +25,7 @@ Proc.new do |
 							  NICKNAME_PURPOSE='\''{{locals[:purpose]}}'\''\
 							  VIC_ENVIRONMENT='\''{{locals[:environment]}}'\''\
 							  export NICKNAME="{{locals[:template]}}"\
-							  NICKNAME_SHELL="{{locals[:template_shell].gsub(/\\/, '\\\\\\') || locals[:template]}}"
+							  NICKNAME_SHELL="{{if locals[:template_shell].nil? then locals[:template] else locals[:template_shell].gsub(/\\/, '\\\\\\') end}}"
 							;
 						}
 						/^\s*\[ "$PS1" = /{
