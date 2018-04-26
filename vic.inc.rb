@@ -106,6 +106,10 @@ class TemplateDSL < JsonObjectDSL
 			gsub(/([A-Z])#{glue}([A-Z])/, '\1\2')
 	end
 
+	def camelify(s)
+		s.to_s.split(/[^a-zA-Z0-9]+/).collect(&:capitalize).join
+	end
+
 	def define_output(resource_name, resource_type, attribute, spec, export_default)
 		unless spec.is_a? Hash
 			spec = attribute.to_s if spec == true
