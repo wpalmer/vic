@@ -49,6 +49,52 @@ Proc.new do |
 					for ebs in "${EBS_IDS[@]}"; do
 						ebsid="${ebs%%:*}"
 						ebsdevice="${ebs#*:}"
+						n=0
+						while true; do
+							attachment_state="$(
+								"$AWS_CMD" ec2 describe-volumes \\
+									--volume-id $ebsid |
+								jq -r '
+									.Volumes[].Attachments[] |
+									select( .InstanceId != "'"$EC2_INSTANCE_ID"'" ).State
+								'
+							)"
+
+							if [[ -z "$attachment_state" ]]; then
+								break
+							fi
+
+							if [[ $n -gt 10 ]]; then
+								printf 'attachment of %s to %s:%s could not be initiated: already attached elsewhere\\n' \\
+									"$ebsid" \\
+									"$EC2_INSTANCE_ID" \\
+									"$ebsdevice" \\
+									>&2
+								exit 1
+							fi
+
+							n=$(( $n + 1 ))
+							case "$attachment_state" in
+								attaching)
+									sleep 60
+									;;
+								attached)
+									sleep 30
+									;;
+								detaching)
+									sleep 10
+									;;
+								*)
+									printf "$attachment_state" >&2
+									exit 1
+									;;
+							esac
+						done
+					done
+
+					for ebs in "${EBS_IDS[@]}"; do
+						ebsid="${ebs%%:*}"
+						ebsdevice="${ebs#*:}"
 						"$AWS_CMD" ec2 attach-volume \\
 							--volume-id $ebsid \\
 							--instance-id "$EC2_INSTANCE_ID" \\
