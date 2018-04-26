@@ -115,7 +115,20 @@ Proc.new do |
 					else
 						interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 							#!/bin/bash -xe
-							EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| v[:device] }) }} )
+							EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device] ]) }) }} )
+							EBS_DEVICES=( )
+
+							for ebs in "${EBS_IDS[@]}"; do
+								ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+								ebsdevice="${ebs#*:}"
+
+								nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+								if [[ -e "$nvme" ]]; then
+									EBS_DEVICES+=( "$(readlink -f "$nvme" )" )
+								else
+									EBS_DEVICES+=( "$ebsdevice" )
+								fi
+							done
 
 							for ebs in "${EBS_DEVICES[@]}"; do
 								if [[ "$(lsblk -lnmf ${ebs} | wc -l)" = "1" ]]; then
@@ -131,7 +144,20 @@ Proc.new do |
 					end,
 				"command" => interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 					#!/bin/bash -xe
-					EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| v[:device] }) }} )
+					EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device] ]) }) }} )
+					EBS_DEVICES=( )
+
+					for ebs in "${EBS_IDS[@]}"; do
+						ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+						ebsdevice="${ebs#*:}"
+
+						nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+						if [[ -e "$nvme" ]]; then
+							EBS_DEVICES+=( "$(readlink -f "$nvme" )" )
+						else
+							EBS_DEVICES+=( "$ebsdevice" )
+						fi
+					done
 
 					for ebs in "${EBS_DEVICES[@]}"; do
 						if [[ "$(lsblk -lnmf ${ebs} | wc -l)" = "1" ]]; then
@@ -153,7 +179,20 @@ Proc.new do |
 					else
 						interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 							#!/bin/bash -xe
-							EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| v[:device] }) }} )
+							EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device] ]) }) }} )
+							EBS_DEVICES=( )
+
+							for ebs in "${EBS_IDS[@]}"; do
+								ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+								ebsdevice="${ebs#*:}"
+
+								nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+								if [[ -e "$nvme" ]]; then
+									EBS_DEVICES+=( "$(readlink -f "$nvme" )" )
+								else
+									EBS_DEVICES+=( "$ebsdevice" )
+								fi
+							done
 
 							for ebs in "${EBS_DEVICES[@]}"; do
 								if [[ "$(lsblk -lnmf ${ebs} | wc -l)" = "2" ]]; then
@@ -169,13 +208,26 @@ Proc.new do |
 					end,
 				"command" => interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 					#!/bin/bash -xe
-					EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| v[:device] }) }} )
+					EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device] ]) }) }} )
+					EBS_DEVICES=( )
+
+					for ebs in "${EBS_IDS[@]}"; do
+						ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+						ebsdevice="${ebs#*:}"
+
+						nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+						if [[ -e "$nvme" ]]; then
+							EBS_DEVICES+=( "$(readlink -f "$nvme" )p1" )
+						else
+							EBS_DEVICES+=( "/dev/xvd${ebsdevice#/dev/sd}1" )
+						fi
+					done
 
 					for ebs in "${EBS_DEVICES[@]}"; do
 						if [[ "$(lsblk -lnmf $ebs | wc -l)" = "2" ]]; then
 							fs="$(lsblk -lnmf $ebs | awk 'NR==2{print $7}')"
 							if [[ -z "$fs" ]]; then
-								mkfs -t ext4 /dev/xvd${ebs#/dev/sd}1
+								mkfs -t ext4 "$ebs"
 							fi
 						fi
 					done
@@ -185,12 +237,25 @@ Proc.new do |
 			"04_mount_persistent_data" => {
 				"test" => interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 					#!/bin/bash -xe
-					EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| v[:device] }) }} )
+					EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device] ]) }) }} )
+					EBS_DEVICES=( )
+
+					for ebs in "${EBS_IDS[@]}"; do
+						ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+						ebsdevice="${ebs#*:}"
+
+						nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+						if [[ -e "$nvme" ]]; then
+							EBS_DEVICES+=( "$(readlink -f "$nvme" )p1" )
+						else
+							EBS_DEVICES+=( "/dev/xvd${ebsdevice#/dev/sd}1" )
+						fi
+					done
 
 					for ebs in "${EBS_DEVICES[@]}"; do
 						if \\
-							grep -q /dev/xvd${ebs#/dev/sd}1 /etc/fstab &&
-							grep -q /dev/xvd${ebs#/dev/sd}1 /etc/mtab
+							grep -q $ebs /etc/fstab &&
+							grep -q $ebs /etc/mtab
 						then
 							continue
 						else
@@ -202,21 +267,32 @@ Proc.new do |
 				),
 				"command" => interpolate(<<-END_SH.gsub(/^\s+/, ""), {v: volumes}
 					#!/bin/bash -xe
-					EBS_DEVICES=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:device], v[:path] ]) }) }} )
+					EBS_IDS=( {{ join(" ", *locals[:v].map{|v| join(":", *[ v[:id], v[:device], v[:path] ]) }) }} )
+					EBS_DEVICES=( )
 
 					mounts=0
-					for ebs in "${EBS_DEVICES[@]}"; do
-						ebsdevice="${ebs%%:*}"
-						ebspath="${ebs#*:}"
-						[[ -b /dev/xvd${ebsdevice#/dev/sd}1 ]] || exit 1
+					for ebs in "${EBS_IDS[@]}"; do
+						ebsid="${ebs%%:*}"; ebsid="${ebsid//-/}"
+						ebsdevicepath="${ebs#*:}"
+						ebsdevice="${ebsdevicepath%%:*}"
+						ebspath="${ebsdevicepath#*:}"
+
+						nvme="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${ebsid}-ns-1"
+						if [[ -e "$nvme" ]]; then
+							ebsdevice="$(readlink -f "$nvme" )p1"
+						else
+							ebsdevice="/dev/xvd${ebsdevice#/dev/sd}1"
+						fi
+
+						[[ -b $ebsdevice ]] || exit 1
 						mkdir -p ${ebspath}
-						grep -q /dev/xvd${ebsdevice#/dev/sd}1 /etc/fstab ||
+						grep -q $ebsdevice /etc/fstab ||
 						printf '%s %s ext4 defaults 0 0\\n' \\
-							"/dev/xvd${ebsdevice#/dev/sd}1" \\
+							"$ebsdevice" \\
 							"${ebspath}" \\
 							>> /etc/fstab
 
-						if ! grep -q /dev/xvd${ebsdevice#/dev/sd}1 /etc/mtab; then
+						if ! grep -q $ebsdevice /etc/mtab; then
 							mount ${ebspath}
 							mounts=$(( $mount + 1 ))
 						fi
